@@ -197,7 +197,7 @@
 </div>
 <script>
 var PROXY = 'https://stock-proxy.several74727.workers.dev';
-var APIKEY = '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';
+
 var MODEL = 'claude-sonnet-4-20250514';
 var mdata = null;
 
@@ -230,7 +230,7 @@ function callAPI(prompt, useSearch) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': APIKEY,
+      
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify(body)
