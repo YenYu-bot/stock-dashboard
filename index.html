@@ -351,9 +351,9 @@ function setColor(id, val) {
 async function callClaude(prompt, useSearch) {
   const body = { model: MODEL, max_tokens: 1000, messages: [{ role: 'user', content: prompt }] };
   if(useSearch) body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('https://stock-proxy.several74727.workers.dev', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01', '
     body: JSON.stringify(body)
   });
   const data = await res.json();
