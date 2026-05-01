@@ -235,6 +235,10 @@ function callAPI(prompt, useSearch) {
     },
     body: JSON.stringify(body)
   }).then(function(res){ return res.json(); }).then(function(data){
+    if (!data || !data.content) {
+      console.error('API error:', JSON.stringify(data));
+      throw new Error(data && data.error ? data.error.message : 'API無回應');
+    }
     return data.content.filter(function(i){ return i.type === 'text'; }).map(function(i){ return i.text; }).join('');
   });
 }
