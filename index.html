@@ -23,8 +23,8 @@
   .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
   .dot.live { background: var(--up); animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
-  .tab { padding: 8px 16px; font-size: 13px; background: none; border: none; cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; transition: color 0.15s; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; }
+  .tab { padding: 8px 16px; font-size: 13px; background: none; border: none; cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; transition: color 0.15s; white-space: nowrap; }
   .tab:hover { color: var(--text2); }
   .tab.active { color: var(--text); border-bottom-color: var(--amber); }
   .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
@@ -114,6 +114,7 @@
     <button class="tab" onclick="switchTab('news')">重大新聞</button>
     <button class="tab" onclick="switchTab('ai')">AI 深度分析</button>
   </div>
+
   <div class="section active" id="tab-overview">
     <div class="metrics">
       <div class="metric"><div class="metric-label">台指期貨（夜盤）</div><div class="metric-value" id="m-fut">--</div><div class="metric-sub" id="m-fut-c">--</div></div>
@@ -124,6 +125,7 @@
     <div class="card"><div class="card-title">夜盤訊號</div><div id="sig-box"><div class="signal neutral"><div class="sig-hdr"><span class="sig-title">夜盤走勢分析</span><span class="badge badge-neutral">分析中</span></div><div class="sig-text">正在獲取數據...</div></div></div></div>
     <div class="card"><div class="card-title">今日三大盤前重點</div><div id="kp-box"><div class="sig-text">載入中...</div></div></div>
   </div>
+
   <div class="section" id="tab-markets">
     <div class="card">
       <div class="card-title">亞洲市場</div>
@@ -148,6 +150,7 @@
       <div class="frow"><span style="font-size:14px">10年美債殖利率</span><span id="v-t10y" style="font-size:14px;font-weight:600">--</span></div>
     </div>
   </div>
+
   <div class="section" id="tab-options">
     <div class="card">
       <div class="card-title">今日選擇權買方建議</div>
@@ -174,13 +177,16 @@
     </div>
     <div class="card"><div class="card-title">OI 熱力圖 &amp; Max Pain</div><div class="heat-grid" id="heat-grid" style="margin-top:4px"></div></div>
   </div>
+
   <div class="section" id="tab-stocks">
     <div class="card"><div class="card-title">近期飆股推薦</div><div id="hot-stocks"><div class="sig-text">載入中...</div></div></div>
     <div class="card"><div class="card-title">產業輪動訊號</div><div id="sector-text" class="sig-text" style="line-height:2">載入中...</div></div>
   </div>
+
   <div class="section" id="tab-news">
     <div class="card"><div class="card-title">最新國際財經新聞</div><div id="news-list"><div class="sig-text">載入中...</div></div></div>
   </div>
+
   <div class="section" id="tab-ai">
     <div class="card">
       <div class="card-title">盤前完整分析報告</div>
@@ -195,51 +201,54 @@
     </div>
   </div>
 </div>
-<script>
-var PROXY = 'https://stock-proxy.several74727.workers.dev';
 
-var MODEL = 'claude-sonnet-4-20250514';
+<script>
+var GEMINI_KEY = 'AIzaSyBUHTjNy2_E4pv5zMrJYYswWDu66bo9MFI';
+var GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
 var mdata = null;
 
 function switchTab(name) {
   var tabs = ['overview','markets','options','stocks','news','ai'];
-  document.querySelectorAll('.tab').forEach(function(t,i){
-    t.classList.toggle('active', tabs[i] === name);
-  });
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', tabs[i]===name); });
   document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
-  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
 }
 
-function st(id, val) {
-  var e = document.getElementById(id);
-  if (e) e.textContent = val || '--';
-}
+function st(id, val) { var e=document.getElementById(id); if(e) e.textContent=val||'--'; }
 
 function colorEl(id, val) {
-  var e = document.getElementById(id);
-  if (!e) return;
+  var e=document.getElementById(id); if(!e) return;
   e.classList.remove('up','down');
-  if (val && String(val).charAt(0) === '+') e.classList.add('up');
-  else if (val && String(val).charAt(0) === '-') e.classList.add('down');
+  if(val && String(val).charAt(0)==='+') e.classList.add('up');
+  else if(val && String(val).charAt(0)==='-') e.classList.add('down');
 }
 
-function callAPI(prompt, useSearch) {
-  var body = { model: MODEL, max_tokens: 1000, messages: [{role:'user', content: prompt}] };
-  if (useSearch) body.tools = [{type:'web_search_20250305', name:'web_search'}];
-  return fetch(PROXY, {
+function callGemini(prompt) {
+  return fetch(GEMINI_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify(body)
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+    })
   }).then(function(res){ return res.json(); }).then(function(data){
-    if (!data || !data.content) {
-      console.error('API error:', JSON.stringify(data));
-      throw new Error(data && data.error ? data.error.message : 'API無回應');
-    }
-    return data.content.filter(function(i){ return i.type === 'text'; }).map(function(i){ return i.text; }).join('');
+    if(data.error) throw new Error(data.error.message);
+    return data.candidates[0].content.parts[0].text;
+  });
+}
+
+function callGeminiNoSearch(prompt) {
+  return fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.5, maxOutputTokens: 1024 }
+    })
+  }).then(function(res){ return res.json(); }).then(function(data){
+    if(data.error) throw new Error(data.error.message);
+    return data.candidates[0].content.parts[0].text;
   });
 }
 
@@ -247,117 +256,115 @@ function loadData() {
   document.getElementById('statusText').textContent = '載入中';
   document.getElementById('statusDot').className = 'dot';
   var today = new Date().toLocaleDateString('zh-TW');
-  var prompt = '你是台灣股市分析師。今天是' + today + '，請用網路搜尋今日最新市場數據，只回傳純JSON不要任何說明或markdown符號：{"taiex_futures":"台指期點數","taiex_chg":"+25","vix":"16.5","vix_status":"低波動","twd":"30.25","twd_chg":"-0.05","win_rate":"62","win_dir":"偏多","night_signal":"偏多","night_analysis":"夜盤分析","key_points":"重點1\n重點2\n重點3","twse":"21580","twse_chg":"+0.8%","nk":"38200","nk_chg":"+1.2%","hsi":"23100","hsi_chg":"+0.5%","kospi":"2680","kospi_chg":"+0.3%","sse":"3350","sse_chg":"-0.2%","djia":"40250","djia_chg":"+0.6%","spx":"5580","spx_chg":"+0.7%","nasdaq":"17900","nasdaq_chg":"+0.9%","sox":"5100","sox_chg":"+1.5%","oil":"78.5","gold":"2380","dxy":"104.2","t10y":"4.35","call_strike":"21700","call_detail":"理由","call_entry":"開盤後15分鐘","call_wr":"62","put_strike":"21400","put_detail":"理由","put_entry":"跌破21500後","put_wr":"38","hot_stocks":[{"code":"2330","name":"台積電","price":"980","chg":"+1.5%","reason":"外資買超"},{"code":"2379","name":"瑞昱","price":"610","chg":"+3.2%","reason":"AI晶片"},{"code":"3711","name":"日月光","price":"195","chg":"+2.8%","reason":"封測需求"},{"code":"6770","name":"力積電","price":"52","chg":"+4.1%","reason":"量能爆增"},{"code":"2454","name":"聯發科","price":"1250","chg":"+2.1%","reason":"手機復甦"}],"sector_signals":"AI族群強勢\n外資買超金融\n傳產相對弱勢","news":[{"tag":"美股","title":"新聞標題","time":"今日06:30","impact":"多"},{"tag":"聯準會","title":"新聞標題","time":"昨日23:00","impact":"多"},{"tag":"地緣政治","title":"新聞標題","time":"昨日20:00","impact":"中"},{"tag":"台股","title":"新聞標題","time":"今日05:00","impact":"多"},{"tag":"原物料","title":"新聞標題","time":"昨日22:00","impact":"中"}],"heat_strikes":["21200","21300","21400","21500","21600","21700","21800","21900","22000","22100"],"heat_call_oi":[8,12,20,35,55,70,45,28,18,10],"heat_put_oi":[10,18,35,65,80,50,30,20,12,7]}';
+  var prompt = '你是台灣股市分析師。今天是' + today + '，請用Google搜尋獲取今日最新市場數據，只回傳純JSON不要任何說明或markdown符號，格式如下：{"taiex_futures":"台指期點數","taiex_chg":"+25","vix":"16.5","vix_status":"低波動","twd":"30.25","twd_chg":"-0.05","win_rate":"62","win_dir":"偏多","night_signal":"偏多","night_analysis":"夜盤分析說明（50字以內）","key_points":"重點1\n重點2\n重點3","twse":"21580","twse_chg":"+0.8%","nk":"38200","nk_chg":"+1.2%","hsi":"23100","hsi_chg":"+0.5%","kospi":"2680","kospi_chg":"+0.3%","sse":"3350","sse_chg":"-0.2%","djia":"40250","djia_chg":"+0.6%","spx":"5580","spx_chg":"+0.7%","nasdaq":"17900","nasdaq_chg":"+0.9%","sox":"5100","sox_chg":"+1.5%","oil":"78.5","gold":"2380","dxy":"104.2","t10y":"4.35","call_strike":"21700","call_detail":"買入理由30字","call_entry":"開盤後15分鐘","call_wr":"62","put_strike":"21400","put_detail":"買入理由30字","put_entry":"跌破21500後","put_wr":"38","hot_stocks":[{"code":"2330","name":"台積電","price":"980","chg":"+1.5%","reason":"外資買超"},{"code":"2379","name":"瑞昱","price":"610","chg":"+3.2%","reason":"AI晶片"},{"code":"3711","name":"日月光","price":"195","chg":"+2.8%","reason":"封測需求"},{"code":"6770","name":"力積電","price":"52","chg":"+4.1%","reason":"量能爆增"},{"code":"2454","name":"聯發科","price":"1250","chg":"+2.1%","reason":"手機復甦"}],"sector_signals":"AI族群強勢，注意散熱PCB\n外資買超金融股，富邦國泰值得關注\n傳產相對弱勢，資金輪入科技","news":[{"tag":"美股","title":"新聞標題","time":"今日06:30","impact":"多"},{"tag":"聯準會","title":"新聞標題","time":"昨日23:00","impact":"多"},{"tag":"地緣政治","title":"新聞標題","time":"昨日20:00","impact":"中"},{"tag":"台股","title":"新聞標題","time":"今日05:00","impact":"多"},{"tag":"原物料","title":"新聞標題","time":"昨日22:00","impact":"中"}],"heat_strikes":["21200","21300","21400","21500","21600","21700","21800","21900","22000","22100"],"heat_call_oi":[8,12,20,35,55,70,45,28,18,10],"heat_put_oi":[10,18,35,65,80,50,30,20,12,7]}';
 
-  callAPI(prompt, true).then(function(text) {
-    text = text.replace(/```json\n?|```\n?/g, '').trim();
-    var s = text.indexOf('{');
-    var e = text.lastIndexOf('}');
-    if (s !== -1 && e !== -1) text = text.slice(s, e + 1);
+  callGemini(prompt).then(function(text) {
+    text = text.replace(/```json\n?|```\n?/g,'').trim();
+    var s=text.indexOf('{'); var e=text.lastIndexOf('}');
+    if(s!==-1 && e!==-1) text=text.slice(s,e+1);
     mdata = JSON.parse(text);
     render(mdata);
-    var now = new Date();
-    document.getElementById('lastUpdate').textContent = '最後更新：' + now.toLocaleDateString('zh-TW') + ' ' + now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('statusText').textContent = '數據已更新';
-    document.getElementById('statusDot').className = 'dot live';
-  }).catch(function(err) {
-    document.getElementById('statusText').textContent = '更新失敗';
-    document.getElementById('lastUpdate').textContent = '載入失敗，請重新整理頁面';
+    var now=new Date();
+    document.getElementById('lastUpdate').textContent='最後更新：'+now.toLocaleDateString('zh-TW')+' '+now.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('statusText').textContent='數據已更新';
+    document.getElementById('statusDot').className='dot live';
+  }).catch(function(err){
+    document.getElementById('statusText').textContent='更新失敗';
+    document.getElementById('lastUpdate').textContent='載入失敗：'+err.message;
     console.error(err);
   });
 }
 
 function render(d) {
-  st('m-fut', d.taiex_futures); colorEl('m-fut', d.taiex_chg); st('m-fut-c', d.taiex_chg);
-  st('m-wr', (d.win_rate || '--') + '%');
-  var wrEl = document.getElementById('m-wr');
-  if (wrEl) wrEl.className = 'metric-value ' + (parseInt(d.win_rate) > 50 ? 'up' : 'down');
-  st('m-dir', d.win_dir); st('m-vix', d.vix); st('m-vixs', d.vix_status); st('m-twd', d.twd); st('m-twdc', d.twd_chg);
+  st('m-fut',d.taiex_futures); colorEl('m-fut',d.taiex_chg); st('m-fut-c',d.taiex_chg);
+  st('m-wr',(d.win_rate||'--')+'%');
+  var wrEl=document.getElementById('m-wr');
+  if(wrEl) wrEl.className='metric-value '+(parseInt(d.win_rate)>50?'up':'down');
+  st('m-dir',d.win_dir); st('m-vix',d.vix); st('m-vixs',d.vix_status); st('m-twd',d.twd); st('m-twdc',d.twd_chg);
 
-  var sc = d.night_signal === '偏多' ? 'bull' : d.night_signal === '偏空' ? 'bear' : 'neutral';
-  var bc = sc === 'bull' ? 'badge-bull' : sc === 'bear' ? 'badge-bear' : 'badge-neutral';
-  document.getElementById('sig-box').innerHTML = '<div class="signal ' + sc + '"><div class="sig-hdr"><span class="sig-title">夜盤走勢分析</span><span class="badge ' + bc + '">' + (d.night_signal || '中性') + '</span></div><div class="sig-text">' + (d.night_analysis || '--') + '</div></div>';
+  var sc=d.night_signal==='偏多'?'bull':d.night_signal==='偏空'?'bear':'neutral';
+  var bc=sc==='bull'?'badge-bull':sc==='bear'?'badge-bear':'badge-neutral';
+  document.getElementById('sig-box').innerHTML='<div class="signal '+sc+'"><div class="sig-hdr"><span class="sig-title">夜盤走勢分析</span><span class="badge '+bc+'">'+(d.night_signal||'中性')+'</span></div><div class="sig-text">'+(d.night_analysis||'--')+'</div></div>';
 
-  if (d.key_points) {
-    document.getElementById('kp-box').innerHTML = d.key_points.split('\n').map(function(p, i) {
-      return '<div class="kp"><span class="kpn">' + (i+1) + '</span><span>' + p.replace(/^\d+[.\s]*/, '') + '</span></div>';
+  if(d.key_points) {
+    document.getElementById('kp-box').innerHTML=d.key_points.split('\n').map(function(p,i){
+      return '<div class="kp"><span class="kpn">'+(i+1)+'</span><span>'+p.replace(/^\d+[.\s]*/,'')+'</span></div>';
     }).join('');
   }
 
-  var mks = [['twse','twse_chg','v-twse','c-twse'],['nk','nk_chg','v-nk','c-nk'],['hsi','hsi_chg','v-hsi','c-hsi'],['kospi','kospi_chg','v-kospi','c-kospi'],['sse','sse_chg','v-sse','c-sse'],['djia','djia_chg','v-djia','c-djia'],['spx','spx_chg','v-spx','c-spx'],['nasdaq','nasdaq_chg','v-nasdaq','c-nasdaq'],['sox','sox_chg','v-sox','c-sox']];
-  mks.forEach(function(m) { st(m[2], d[m[0]]); st(m[3], d[m[1]]); colorEl(m[3], d[m[1]]); });
-  if (d.oil) st('v-oil', '$' + d.oil);
-  if (d.gold) st('v-gold', '$' + d.gold);
-  if (d.dxy) st('v-dxy', d.dxy);
-  if (d.t10y) st('v-t10y', d.t10y + '%');
+  var mks=[['twse','twse_chg','v-twse','c-twse'],['nk','nk_chg','v-nk','c-nk'],['hsi','hsi_chg','v-hsi','c-hsi'],['kospi','kospi_chg','v-kospi','c-kospi'],['sse','sse_chg','v-sse','c-sse'],['djia','djia_chg','v-djia','c-djia'],['spx','spx_chg','v-spx','c-spx'],['nasdaq','nasdaq_chg','v-nasdaq','c-nasdaq'],['sox','sox_chg','v-sox','c-sox']];
+  mks.forEach(function(m){ st(m[2],d[m[0]]); st(m[3],d[m[1]]); colorEl(m[3],d[m[1]]); });
+  if(d.oil) st('v-oil','$'+d.oil);
+  if(d.gold) st('v-gold','$'+d.gold);
+  if(d.dxy) st('v-dxy',d.dxy);
+  if(d.t10y) st('v-t10y',d.t10y+'%');
 
-  if (d.call_strike) {
-    st('o-call-t', 'TXO ' + d.call_strike + ' Call'); st('o-call-d', d.call_detail);
-    st('o-call-s', d.call_strike); st('o-call-e', d.call_entry); st('o-call-w', (d.call_wr || '--') + '%');
-    document.getElementById('o-call-bar').style.width = (d.call_wr || 0) + '%';
+  if(d.call_strike){
+    st('o-call-t','TXO '+d.call_strike+' Call'); st('o-call-d',d.call_detail);
+    st('o-call-s',d.call_strike); st('o-call-e',d.call_entry); st('o-call-w',(d.call_wr||'--')+'%');
+    document.getElementById('o-call-bar').style.width=(d.call_wr||0)+'%';
   }
-  if (d.put_strike) {
-    st('o-put-t', 'TXO ' + d.put_strike + ' Put'); st('o-put-d', d.put_detail);
-    st('o-put-s', d.put_strike); st('o-put-e', d.put_entry); st('o-put-w', (d.put_wr || '--') + '%');
-    document.getElementById('o-put-bar').style.width = (d.put_wr || 0) + '%';
+  if(d.put_strike){
+    st('o-put-t','TXO '+d.put_strike+' Put'); st('o-put-d',d.put_detail);
+    st('o-put-s',d.put_strike); st('o-put-e',d.put_entry); st('o-put-w',(d.put_wr||'--')+'%');
+    document.getElementById('o-put-bar').style.width=(d.put_wr||0)+'%';
   }
 
-  if (d.heat_strikes) {
-    var tots = d.heat_strikes.map(function(_, i) { return d.heat_call_oi[i] + d.heat_put_oi[i]; });
-    var mx = tots.indexOf(Math.max.apply(null, tots));
-    document.getElementById('heat-grid').innerHTML = d.heat_strikes.map(function(s, i) {
-      return '<div class="hcell' + (i === mx ? ' max' : '') + '"><div style="font-size:10px;color:var(--text3)">' + s + '</div><div style="font-size:11px;font-weight:600;color:var(--up)">C:' + d.heat_call_oi[i] + '</div><div style="font-size:11px;font-weight:600;color:var(--down)">P:' + d.heat_put_oi[i] + '</div>' + (i === mx ? '<div style="font-size:9px;color:var(--amber)">Max</div>' : '') + '</div>';
+  if(d.heat_strikes){
+    var tots=d.heat_strikes.map(function(_,i){return d.heat_call_oi[i]+d.heat_put_oi[i];});
+    var mx=tots.indexOf(Math.max.apply(null,tots));
+    document.getElementById('heat-grid').innerHTML=d.heat_strikes.map(function(s,i){
+      return '<div class="hcell'+(i===mx?' max':'')+'"><div style="font-size:10px;color:var(--text3)">'+s+'</div><div style="font-size:11px;font-weight:600;color:var(--up)">C:'+d.heat_call_oi[i]+'</div><div style="font-size:11px;font-weight:600;color:var(--down)">P:'+d.heat_put_oi[i]+'</div>'+(i===mx?'<div style="font-size:9px;color:var(--amber)">Max</div>':'')+'</div>';
     }).join('');
   }
 
-  if (d.hot_stocks) {
-    document.getElementById('hot-stocks').innerHTML = d.hot_stocks.map(function(s) {
-      var up = s.chg && String(s.chg).charAt(0) === '+';
-      return '<div class="srow"><span class="scode">' + s.code + '</span><span class="sname">' + s.name + '</span><span class="sreason">' + s.reason + '</span><span class="sprice">' + s.price + '</span><span class="schg ' + (up ? 'up' : 'down') + '">' + s.chg + '</span></div>';
+  if(d.hot_stocks){
+    document.getElementById('hot-stocks').innerHTML=d.hot_stocks.map(function(s){
+      var up=s.chg&&String(s.chg).charAt(0)==='+';
+      return '<div class="srow"><span class="scode">'+s.code+'</span><span class="sname">'+s.name+'</span><span class="sreason">'+s.reason+'</span><span class="sprice">'+s.price+'</span><span class="schg '+(up?'up':'down')+'">'+s.chg+'</span></div>';
     }).join('');
   }
 
-  if (d.sector_signals) {
-    document.getElementById('sector-text').innerHTML = d.sector_signals.split('\n').map(function(p) {
-      return '<div style="padding:3px 0">&#9658; ' + p + '</div>';
+  if(d.sector_signals){
+    document.getElementById('sector-text').innerHTML=d.sector_signals.split('\n').map(function(p){
+      return '<div style="padding:3px 0">&#9658; '+p+'</div>';
     }).join('');
   }
 
-  if (d.news) {
-    document.getElementById('news-list').innerHTML = d.news.map(function(n) {
-      var ic = n.impact === '多' ? 'tag-bull' : n.impact === '空' ? 'tag-bear' : 'tag-n';
-      var il = n.impact === '多' ? '利多' : n.impact === '空' ? '利空' : '中性';
-      return '<div class="nitem"><div class="ntags"><span class="ntag tag-n">' + n.tag + '</span><span class="ntag ' + ic + '">' + il + '</span></div><div class="ntitle">' + n.title + '</div><div class="ntime">' + n.time + '</div></div>';
+  if(d.news){
+    document.getElementById('news-list').innerHTML=d.news.map(function(n){
+      var ic=n.impact==='多'?'tag-bull':n.impact==='空'?'tag-bear':'tag-n';
+      var il=n.impact==='多'?'利多':n.impact==='空'?'利空':'中性';
+      return '<div class="nitem"><div class="ntags"><span class="ntag tag-n">'+n.tag+'</span><span class="ntag '+ic+'">'+il+'</span></div><div class="ntitle">'+n.title+'</div><div class="ntime">'+n.time+'</div></div>';
     }).join('');
   }
 }
 
 function generateReport() {
-  var btn = document.getElementById('reportBtn');
-  btn.disabled = true; btn.textContent = '生成中...';
-  var box = document.getElementById('ai-report');
-  box.textContent = '分析中，請稍候（約15-30秒）...';
-  var ctx = mdata ? JSON.stringify(mdata) : '數據未載入';
-  var today = new Date().toLocaleDateString('zh-TW');
-  callAPI('你是資深台灣期貨交易員。根據以下市場數據，用繁體中文撰寫' + today + '盤前分析報告。市場數據：' + ctx + '\n\n請用以下格式（每段50字以內）：\n\n【夜盤總結】\n（2句話）\n\n【今日關鍵價位】\n強壓：XXX\n強支：XXX\n多空分界：XXX\n\n【多空研判】\n（偏多或偏空或震盪加上理由）\n\n【選擇權策略】\n買方建議：XXX\n注意事項：XXX\n\n【今日注意事項】\n（3個重點）', false).then(function(text) {
-    box.textContent = text;
-    btn.disabled = false; btn.textContent = '重新生成';
-  }).catch(function(err) {
-    box.textContent = '生成失敗：' + err.message;
-    btn.disabled = false; btn.textContent = '重新生成';
+  var btn=document.getElementById('reportBtn');
+  btn.disabled=true; btn.textContent='生成中...';
+  var box=document.getElementById('ai-report');
+  box.textContent='分析中，請稍候（約15秒）...';
+  var ctx=mdata?JSON.stringify(mdata):'數據未載入';
+  var today=new Date().toLocaleDateString('zh-TW');
+  callGeminiNoSearch('你是資深台灣期貨交易員。根據以下市場數據，用繁體中文撰寫'+today+'盤前分析報告。市場數據：'+ctx+'\n\n請用以下格式（每段50字以內，直接實用）：\n\n【夜盤總結】\n（2句話）\n\n【今日關鍵價位】\n強壓：XXX\n強支：XXX\n多空分界：XXX\n\n【多空研判】\n（偏多或偏空或震盪加上理由）\n\n【選擇權策略】\n買方建議：XXX\n注意事項：XXX\n\n【今日注意事項】\n（3個重點）').then(function(text){
+    box.textContent=text;
+    btn.disabled=false; btn.textContent='重新生成';
+  }).catch(function(err){
+    box.textContent='生成失敗：'+err.message;
+    btn.disabled=false; btn.textContent='重新生成';
   });
 }
 
 function generateCustom() {
-  var q = document.getElementById('customQ').value.trim();
-  if (!q) return;
-  var box = document.getElementById('ai-custom');
-  box.style.display = 'block'; box.textContent = '分析中...';
-  var ctx = mdata ? JSON.stringify(mdata) : '';
-  callAPI('你是資深台灣期貨交易員。市場數據：' + ctx + '\n\n問題：' + q + '\n\n請用繁體中文直接給出實用答案（200字以內）。', false).then(function(text) {
-    box.textContent = text;
-  }).catch(function(err) {
-    box.textContent = '失敗：' + err.message;
+  var q=document.getElementById('customQ').value.trim(); if(!q) return;
+  var box=document.getElementById('ai-custom');
+  box.style.display='block'; box.textContent='分析中...';
+  var ctx=mdata?JSON.stringify(mdata):'';
+  callGeminiNoSearch('你是資深台灣期貨交易員。市場數據：'+ctx+'\n\n問題：'+q+'\n\n請用繁體中文直接給出實用答案（200字以內）。').then(function(text){
+    box.textContent=text;
+  }).catch(function(err){
+    box.textContent='失敗：'+err.message;
   });
 }
 
