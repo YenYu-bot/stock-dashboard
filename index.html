@@ -229,7 +229,7 @@ function callGemini(prompt) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
+      
       generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
     })
   }).then(function(res){ return res.json(); }).then(function(data){
